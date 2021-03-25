@@ -1,15 +1,24 @@
 package com.example.realmdbtest
 
+// how to setup the auth using jwt
+//https://medium.com/swlh/mongodb-realm-jwt-meta-data-and-custom-user-data-dc04d86bf542
 import android.os.Bundle
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
-import androidx.appcompat.app.AppCompatActivity
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
+import com.android.volley.AuthFailureError
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.VolleyError
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
 import io.realm.OrderedRealmCollectionChangeListener
 import io.realm.Realm
-import io.realm.RealmConfiguration
 import io.realm.RealmResults
 import io.realm.kotlin.where
 import io.realm.mongodb.App
@@ -17,6 +26,9 @@ import io.realm.mongodb.AppConfiguration
 import io.realm.mongodb.Credentials
 import io.realm.mongodb.User
 import io.realm.mongodb.sync.SyncConfiguration
+import io.realm.mongodb.sync.SyncSession
+import org.json.JSONObject
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.FutureTask
@@ -25,25 +37,82 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var uiThreadRealm: Realm
     lateinit var app: App
+    lateinit var assetToken: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // initialize the template ui
+        Log.d("TAG", "application started")
+        super.onCreate(savedInstanceState)
 
+
+        // authenticate to the custom asset backend:
+        var accessToken: String
+        val jsonobj = JSONObject()
+        jsonobj.put("username", "demo1")
+        jsonobj.put("password", "pwd")
+        val queue = Volley.newRequestQueue(this)
+
+
+        // Request the token for user autorization.
+        val url = "https://dev.60hertz.io/api/asset/auth/login";
+        val req = JsonObjectRequest(Request.Method.POST, url, jsonobj,
+                Response.Listener {
+                    response ->
+                    println("-----> Auth response -> $response")
+                    accessToken = response.get("token") as String
+
+
+                    // chain the jwt get
+                    val jwtUrl = "https://dev.60hertz.io/api/asset/jwt";
+                    val jwtreq = object: StringRequest(Request.Method.GET, jwtUrl,
+                            Response.Listener<String> { response ->
+                                println("------> Jwk response -> $response")
+                            },
+                            Response.ErrorListener { error ->
+                                println("=======> Jwk error -> $error")
+                            })
+                    {
+                        override fun getHeaders(): MutableMap<String, String> {
+                            val headers = HashMap<String, String>()
+                            headers["Authorization"] = "Bearer $accessToken"
+                            return headers
+                        }
+                    }
+                    queue.add(jwtreq)
+
+
+                }, Response.ErrorListener { error: VolleyError ->
+                    println("=====> Auth error $error.message")
+                }
+        )
+        queue.add(req)
+
+
+        // realm configuration
         Realm.init(this) // context, usually an Activity or Application
         val appID : String = "dev-realm-tncst";
-        app = App(AppConfiguration.Builder(appID)
-            .build())
 
+        val handler =
+                SyncSession.ClientResetHandler { session, error ->
+                    Log.e("EXAMPLE", "Client Reset required for: ${session.configuration.serverUrl} for error: $error")
+                }
+        app = App(
+                AppConfiguration.Builder(appID)
+                        .defaultClientResetHandler(handler)
+                        .build()
+        )
 
         val credentials: Credentials = Credentials.anonymous()
 
-        
+
+        var user: User? = null
         app.loginAsync(credentials) {
             if (it.isSuccess) {
                 Log.v("QUICKSTART", "Successfully authenticated anonymously.")
                 val user: User? = app.currentUser()
-                val partitionValue: String = "My Project"
+                val partitionValue: String = "101"
                 val config = SyncConfiguration.Builder(user, partitionValue)
-                    .build()
+                        .build()
                 uiThreadRealm = Realm.getInstance(config)
                 addChangeListenerToRealm(uiThreadRealm)
                 val task : FutureTask<String> = FutureTask(BackgroundQuickStart(app.currentUser()!!), "test")
@@ -58,36 +127,22 @@ class MainActivity : AppCompatActivity() {
 
 
 
-
-        val realmName: String = "My Project"
-        val config = RealmConfiguration.Builder().name(realmName).build()
-        val backgroundThreadRealm : Realm = Realm.getInstance(config)
-
-
-
-
-        Log.d("TAG", "application started")
-        super.onCreate(savedInstanceState)
+        // template related
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
-
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
-            // all tasks in the realm
-            val assetTypes : RealmResults<AssetType> = backgroundThreadRealm.where<AssetType>().findAll()
-            println("just the assetType: $assetTypes")
 
+            // all tasks in the realm
+            val assetTypes : RealmResults<AssetType> = uiThreadRealm.where<AssetType>().findAll()
+            println("just the assetType: $assetTypes")
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
     }
-
-    /**
-     *  Additional function needed :
-     */
     fun addChangeListenerToRealm(realm : Realm) {
-        // all tasks in the realm
-        val tasks : RealmResults<AssetType> = realm.where<AssetType>().findAllAsync()
-        tasks.addChangeListener(OrderedRealmCollectionChangeListener<RealmResults<AssetType>> { collection, changeSet ->
+        // all assetType in the realm
+        val assetType : RealmResults<AssetType> = realm.where<AssetType>().findAllAsync()
+        assetType.addChangeListener(OrderedRealmCollectionChangeListener<RealmResults<AssetType>> { collection, changeSet ->
             // process deletions in reverse order if maintaining parallel data structures so indices don't change as you iterate
             val deletions = changeSet.deletionRanges
             for (i in deletions.indices.reversed()) {
@@ -121,19 +176,35 @@ class MainActivity : AppCompatActivity() {
                 super.onOptionsItemSelected(item)
         }
     }
-}
 
-class BackgroundQuickStart(val user: User) : Runnable {
-    override fun run() {
-        val partitionValue: String = "My Project"
-        val config = SyncConfiguration.Builder(user, partitionValue)
-            .build()
-        val backgroundThreadRealm : Realm = Realm.getInstance(config)
-        val task : AssetType = AssetType()
-        backgroundThreadRealm.executeTransaction { transactionRealm ->
-            transactionRealm.insert(task)
+    class BackgroundQuickStart(val user: User) : Runnable {
+        override fun run() {
+            val partitionValue: String = "101"
+            val config = SyncConfiguration.Builder(user, partitionValue)
+                    .build()
+            val backgroundThreadRealm : Realm = Realm.getInstance(config)
+            val assetType : AssetType = AssetType()
+            assetType.oid = "aaa2324rf"
+            assetType.org_id = "101"
+            assetType.name = "realm test"
+            assetType.modified = Date()
+
+            backgroundThreadRealm.executeTransaction { transactionRealm ->
+                transactionRealm.insert(assetType)
+            }
+            // all tasks in the realm
+            val assetTypes : RealmResults<AssetType> = backgroundThreadRealm.where<AssetType>().findAll()
+            println(">>>>>>>> just the assetType: $assetTypes")
+
+
+            // all modifications to a realm must happen inside of a write block
+//            backgroundThreadRealm.executeTransaction { transactionRealm ->
+//                val innerYetAnotherTask : AssetType = transactionRealm.where<AssetType>().equalTo("_id", yetAnotherTaskId).findFirst()!!
+//                innerYetAnotherTask.deleteFromRealm()
+//            }
+            // because this background thread uses synchronous realm transactions, at this point all
+            // transactions have completed and we can safely close the realm
+            backgroundThreadRealm.close()
         }
-
-        backgroundThreadRealm.close()
     }
 }
