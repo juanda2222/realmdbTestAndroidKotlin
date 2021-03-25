@@ -45,6 +45,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
 
+        // realm initialization
+        Realm.init(this) // context, usually an Activity or Application
+        val appID : String = "dev-realm-tncst";
+
+        val handler =
+                SyncSession.ClientResetHandler { session, error ->
+                    Log.e("EXAMPLE", "Client Reset required for: ${session.configuration.serverUrl} for error: $error")
+                }
+        app = App(
+                AppConfiguration.Builder(appID)
+                        .defaultClientResetHandler(handler)
+                        .build()
+        )
+
         // authenticate to the custom asset backend:
         var accessToken: String
         val jsonobj = JSONObject()
@@ -64,9 +78,31 @@ class MainActivity : AppCompatActivity() {
 
                     // chain the jwt get
                     val jwtUrl = "https://dev.60hertz.io/api/asset/jwt";
-                    val jwtreq = object: StringRequest(Request.Method.GET, jwtUrl,
-                            Response.Listener<String> { response ->
+                    val jwtreq = object: JsonObjectRequest(Request.Method.GET, jwtUrl, null,
+                            Response.Listener { response ->
                                 println("------> Jwk response -> $response")
+                                var signedJwt = response.get("accessToken") as String
+
+                                // once we have the signed token we login to realm
+                                // login to realm DB
+                                val credentials: Credentials = Credentials.jwt(signedJwt)
+                                var user: User? = null
+                                app.loginAsync(credentials) {
+                                    if (it.isSuccess) {
+                                        Log.v("QUICKSTART", "Successfully authenticated anonymously.")
+                                        val user: User? = app.currentUser()
+                                        val partitionValue: String = "101"
+                                        val config = SyncConfiguration.Builder(user, partitionValue)
+                                                .build()
+                                        uiThreadRealm = Realm.getInstance(config)
+                                        addChangeListenerToRealm(uiThreadRealm)
+                                        val task : FutureTask<String> = FutureTask(BackgroundQuickStart(app.currentUser()!!), "test")
+                                        val executorService: ExecutorService = Executors.newFixedThreadPool(2)
+                                        executorService.execute(task)
+                                    } else {
+                                        Log.e("QUICKSTART", "Failed to log in. Error: ${it.error}")
+                                    }
+                                }
                             },
                             Response.ErrorListener { error ->
                                 println("=======> Jwk error -> $error")
@@ -82,50 +118,10 @@ class MainActivity : AppCompatActivity() {
 
 
                 }, Response.ErrorListener { error: VolleyError ->
-                    println("=====> Auth error $error.message")
-                }
+            println("=====> Auth error $error.message")
+        }
         )
         queue.add(req)
-
-
-        // realm configuration
-        Realm.init(this) // context, usually an Activity or Application
-        val appID : String = "dev-realm-tncst";
-
-        val handler =
-                SyncSession.ClientResetHandler { session, error ->
-                    Log.e("EXAMPLE", "Client Reset required for: ${session.configuration.serverUrl} for error: $error")
-                }
-        app = App(
-                AppConfiguration.Builder(appID)
-                        .defaultClientResetHandler(handler)
-                        .build()
-        )
-
-        val credentials: Credentials = Credentials.anonymous()
-
-
-        var user: User? = null
-        app.loginAsync(credentials) {
-            if (it.isSuccess) {
-                Log.v("QUICKSTART", "Successfully authenticated anonymously.")
-                val user: User? = app.currentUser()
-                val partitionValue: String = "101"
-                val config = SyncConfiguration.Builder(user, partitionValue)
-                        .build()
-                uiThreadRealm = Realm.getInstance(config)
-                addChangeListenerToRealm(uiThreadRealm)
-                val task : FutureTask<String> = FutureTask(BackgroundQuickStart(app.currentUser()!!), "test")
-                val executorService: ExecutorService = Executors.newFixedThreadPool(2)
-                executorService.execute(task)
-            } else {
-                Log.e("QUICKSTART", "Failed to log in. Error: ${it.error}")
-            }
-        }
-
-
-
-
 
         // template related
         setContentView(R.layout.activity_main)
