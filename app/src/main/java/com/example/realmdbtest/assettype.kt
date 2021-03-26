@@ -8,8 +8,8 @@ import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
 import io.realm.annotations.Required
 
-open class AssetType(
-    @PrimaryKey var _id: String = "",
+open class assettype(
+    @PrimaryKey var _id: ObjectId? = null,
     var __v: Long? = null,
     var active: Boolean? = null,
     var category_id: String? = null,
@@ -21,12 +21,12 @@ open class AssetType(
     var name: String? = null,
     var oid: String? = null,
     var org_id: String? = null,
-    var template: RealmList<AssetTypeTemplate> = RealmList()
+    var template: RealmList<assettype_template> = RealmList()
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplate(
+open class assettype_template(
     var active: Boolean? = null,
     var card_visible: Boolean? = null,
     var datatype: String? = null,
@@ -37,56 +37,55 @@ open class AssetTypeTemplate(
     var frequency: String? = null,
     var is_timeseries: Boolean? = null,
     var key: String? = null,
-    var label: AssetTypeTemplateLabel? = null,
+    var label: assettype_template_label? = null,
     var readonly: Boolean? = null,
     var required: Boolean? = null,
-    var title: AssetTypeTemplateTitle? = null,
-    var values: RealmList<AssetTypeTemplateValues> = RealmList(),
+    var title: assettype_template_title? = null,
+    var values: RealmList<assettype_template_values> = RealmList(),
     var widget: String? = null
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateLabel(
-    var locales: RealmList<AssetTypeTemplateLabelLocales> = RealmList()
+open class assettype_template_label(
+    var locales: RealmList<assettype_template_label_locales> = RealmList()
 ): RealmObject() {}
 
-
 @RealmClass(embedded = true)
-open class AssetTypeTemplateLabelLocales(
+open class assettype_template_label_locales(
     var locale: String? = null,
     var text: String? = null
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateTitle(
-    var locales: RealmList<AssetTypeTemplateTitleLocales> = RealmList()
+open class assettype_template_title(
+    var locales: RealmList<assettype_template_title_locales> = RealmList()
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateTitleLocales(
+open class assettype_template_title_locales(
     var locale: String? = null,
     var text: String? = null
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateValues(
-    var display: AssetTypeTemplateValuesDisplay? = null,
+open class assettype_template_values(
+    var display: assettype_template_values_display? = null,
     var value: String? = null
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateValuesDisplay(
-    var locales: RealmList<AssetTypeTemplateValuesDisplayLocales> = RealmList()
+open class assettype_template_values_display(
+    var locales: RealmList<assettype_template_values_display_locales> = RealmList()
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplateValuesDisplayLocales(
+open class assettype_template_values_display_locales(
     var locale: String? = null,
     var text: String? = null
 ): RealmObject() {}
