@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
 
             // all tasks in the realm
-            val assetTypes : RealmResults<assettype> = uiThreadRealm.where<assettype>().findAll()
+            val assetTypes : RealmResults<AssetType> = uiThreadRealm.where<AssetType>().findAll()
             println("Read assetTypes: $assetTypes")
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
@@ -144,8 +144,8 @@ class MainActivity : AppCompatActivity() {
     }
     fun addChangeListenerToRealm(realm : Realm) {
         // all assetType in the realm
-        val assetTypeResult : RealmResults<assettype> = realm.where<assettype>().findAllAsync()
-        assetTypeResult.addChangeListener(OrderedRealmCollectionChangeListener<RealmResults<assettype>> { collection, changeSet ->
+        val assetTypeResult : RealmResults<AssetType> = realm.where<AssetType>().findAllAsync()
+        assetTypeResult.addChangeListener(OrderedRealmCollectionChangeListener<RealmResults<AssetType>> { collection, changeSet ->
             // process deletions in reverse order if maintaining parallel data structures so indices don't change as you iterate
             val deletions = changeSet.deletionRanges
             for (i in deletions.indices.reversed()) {
@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             val config = SyncConfiguration.Builder(user, partitionValue)
                     .build()
             val backgroundThreadRealm : Realm = Realm.getInstance(config)
-            val assetTypeCustom : assettype = assettype()
+            val assetTypeCustom : AssetType = AssetType()
             assetTypeCustom.oid = "aaa2324rf"
             assetTypeCustom.org_id = "101"
             assetTypeCustom.name = "realm test"
@@ -196,7 +196,7 @@ class MainActivity : AppCompatActivity() {
                 transactionRealm.insert(assetTypeCustom)
             }
             // all tasks in the realm
-            val assetTypes : RealmResults<assettype> = backgroundThreadRealm.where<assettype>().findAll()
+            val assetTypes : RealmResults<AssetType> = backgroundThreadRealm.where<AssetType>().findAll()
             println(">>>>>>>> just the assetType: $assetTypes")
 
 
