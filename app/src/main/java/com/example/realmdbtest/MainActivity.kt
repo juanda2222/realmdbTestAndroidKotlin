@@ -61,7 +61,6 @@ class MainActivity : AppCompatActivity() {
         )
 
         // authenticate to the custom asset backend:
-        var accessToken: String
         val jsonobj = JSONObject()
         jsonobj.put("username", "demo1")
         jsonobj.put("password", "pwd")
@@ -74,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                 Response.Listener {
                     response ->
                     println("-----> Auth response -> $response")
-                    accessToken = response.get("token") as String
+                    var accessToken = response.get("token") as String
 
 
                     // chain the jwt get
@@ -87,7 +86,6 @@ class MainActivity : AppCompatActivity() {
                                 // once we have the signed token we login to realm
                                 // login to realm DB
                                 val credentials: Credentials = Credentials.jwt(signedJwt)
-                                var user: User? = null
                                 app.loginAsync(credentials) {
                                     if (it.isSuccess) {
                                         Log.v("QUICKSTART", "Successfully authenticated with JWT.")
@@ -103,7 +101,6 @@ class MainActivity : AppCompatActivity() {
                                         val config = SyncConfiguration.Builder(user, partitionValue)
                                                 .build()
                                         uiThreadRealm = Realm.getInstance(config)
-
 
                                         // // suposed to be needed for the migration problems
                                         // val migration_config: RealmConfiguration = RealmConfiguration.Builder()
