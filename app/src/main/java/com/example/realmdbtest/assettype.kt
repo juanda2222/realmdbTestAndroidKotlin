@@ -8,7 +8,7 @@ import io.realm.annotations.PrimaryKey
 import io.realm.annotations.RealmClass
 import io.realm.annotations.Required
 
-open class AssetType(
+open class assettype(
         @PrimaryKey var _id: ObjectId? = ObjectId(),
         var __v: Long? = null,
         var active: Boolean? = null,
@@ -21,12 +21,12 @@ open class AssetType(
         var name: String? = null,
         var oid: String? = null,
         var org_id: String? = null,
-        var template: RealmList<AssetTypeTemplate> = RealmList()
+        var template: RealmList<assettype_template> = RealmList()
 ): RealmObject() {}
 
 
 @RealmClass(embedded = true)
-open class AssetTypeTemplate(
+open class assettype_template(
         var active: Boolean? = null,
         var card_visible: Boolean? = null,
         var datatype: String? = null,
